@@ -5,6 +5,7 @@ import express, { NextFunction, Request, Response } from 'express';
 import morgan from 'morgan';
 import Blockchain from '../lib/blockchain';
 import Block from '../lib/block';
+import Transaction from '../lib/transaction';
 
 /* c8 ignore next */
 const PORT: number = parseInt(`${process.env.BLOCKCHAIN_PORT || 3000}`);
@@ -21,7 +22,8 @@ const blockchain = new Blockchain();
 
 app.get('/status', (req: Request, res: Response, next: NextFunction) => {
     res.json({
-        numberOfBlocks: blockchain.blocks.length,
+        mempool: blockchain.mempool.length,
+        blocks: blockchain.blocks.length,
         isValid: blockchain.isValid(),
         lastBlock: blockchain.getLastBlock()
     })
@@ -58,10 +60,33 @@ app.post('/blocks', (req: Request, res: Response, next: NextFunction) => {
     
 })
 
+app.post('/transactions', (req: Request, res: Response, next: NextFunction) => {
+    if(req.body.hash === undefined) return res.sendStatus(422);
+
+    const tx = new Transaction(req.body as Transaction);
+    const validation = blockchain.addTransaction(tx);
+
+    if(validation.success)
+        res.status(201).json(tx);
+    else
+        res.status(400).json(validation);
+    
+})
+
+app.get('/transactions/:hash?', (req: Request, res: Response, next: NextFunction) => {
+    if(req.params.hash)
+        res.json(blockchain.getTransaction(req.params.hash));
+    else
+        res.json({
+            next: blockchain.mempool.slice(0, Blockchain.TX_PER_BLOCK),
+            total: blockchain.mempool.length
+        })
+})
+
 /* c8 ignore start */
 if(process.argv.includes("--run")){
     app.listen(PORT, () => {
-        console.log(`Blockchain server ir runninga at ${PORT}`)
+        console.log(`Blockchain server ir running at ${PORT}`)
     })
 }
 /* c8 ignore end */
