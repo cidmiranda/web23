@@ -1,20 +1,25 @@
-import express from 'express';
+import dotenv from 'dotenv';
+dotenv.config();
+
+import express, { NextFunction, Request, Response } from 'express';
 import morgan from 'morgan';
 import Blockchain from '../lib/blockchain';
 import Block from '../lib/block';
 
-const PORT: number = 3000;
+/* c8 ignore next */
+const PORT: number = parseInt(`${process.env.BLOCKCHAIN_PORT || 3000}`);
 const app = express();
 
-
-//if(process.argv.includes("--run"))
-app.use(morgan('tiny'));
+/* c8 ignore start */
+if(process.argv.includes("--run"))
+    app.use(morgan('tiny'));
+/* c8 ignore end */
 
 app.use(express.json());
 
 const blockchain = new Blockchain();
 
-app.get('/status', (req, res, next) => {
+app.get('/status', (req: Request, res: Response, next: NextFunction) => {
     res.json({
         numberOfBlocks: blockchain.blocks.length,
         isValid: blockchain.isValid(),
@@ -22,7 +27,11 @@ app.get('/status', (req, res, next) => {
     })
 })
 
-app.get('/blocks/:indexOrHash', (req, res, next) => {
+app.get('/blocks/next', (req: Request, res: Response, next: NextFunction) => {
+    res.json(blockchain.getNextBlock());
+})
+
+app.get('/blocks/:indexOrHash', (req: Request, res: Response, next: NextFunction) => {
     let block;
     if(/^[0-9]+$/.test(req.params.indexOrHash))
         block = blockchain.blocks[parseInt(req.params.indexOrHash)]
@@ -36,7 +45,7 @@ app.get('/blocks/:indexOrHash', (req, res, next) => {
 
 })
 
-app.post('/blocks', (req, res, next) => {
+app.post('/blocks', (req: Request, res: Response, next: NextFunction) => {
     if(req.body.hash === undefined) return res.sendStatus(422);
 
     const block = new Block(req.body as Block);
@@ -49,11 +58,13 @@ app.post('/blocks', (req, res, next) => {
     
 })
 
-//if(process.argv.includes("--run")){
-app.listen(PORT, () => {
-    console.log(`Blockchain server ir runninga at ${PORT}`)
-})
-//}
+/* c8 ignore start */
+if(process.argv.includes("--run")){
+    app.listen(PORT, () => {
+        console.log(`Blockchain server ir runninga at ${PORT}`)
+    })
+}
+/* c8 ignore end */
 
 export {
     app
