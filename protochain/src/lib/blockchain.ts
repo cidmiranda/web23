@@ -4,6 +4,8 @@ import BlockInfo from "./blockInfo";
 import Transaction from "./transaction";
 import TransactionType from "./transactionType";
 import TransactionSearch from "./transactionSearch";
+import TransactionOutput from "./transactionOutput";
+import TransactionInput from "./transactionInput";
 
 /**
  * Blockchain class
@@ -18,17 +20,28 @@ export default class Blockchain {
     /**
      * Creates a new blockchain
      */
-    constructor(){
+    constructor(miner: string){
+        this.blocks = [];
         this.mempool = [];
-        this.blocks = [new Block({
-            index: this.nextIndex, 
-            previousHash: "", 
-            transactions: [new Transaction({
-                type: TransactionType.FEE,
-                data: new Date().toString()
-            } as Transaction)]
-        } as Block)];
+
+        const genesis = this.createGenesis(miner);
+        this.blocks.push(genesis);
         this.nextIndex++;
+    }
+
+    createGenesis(miner: string): Block {
+        const amount = Blockchain.getRewardAmount(this.getDifficulty());
+
+        const tx = Transaction.fromReward(new TransactionOutput({
+            amount,
+            toAddress: miner
+        } as TransactionOutput));
+        
+        const block = new Block();
+        block.transactions = [tx];
+        block.mine(this.getDifficulty(), miner);
+
+        return block;
     }
 
     getLastBlock(): Block {
@@ -36,27 +49,45 @@ export default class Blockchain {
     }
 
     getDifficulty(): number{
-        return Math.ceil(this.blocks.length / Blockchain.DIFFICULTY_FACTOR);
+        return Math.ceil(this.blocks.length / Blockchain.DIFFICULTY_FACTOR) + 1;
     }
 
     addTransaction(transaction: Transaction): Validation {
-        const validation = transaction.isValid();
+        if(transaction.txInputs && transaction.txInputs.length){
+            const from = transaction.txInputs[0].fromAddress;
+            const pendingTx = this.mempool
+                .filter(tx => tx.txInputs && tx.txInputs.length)
+                .map(tx => tx.txInputs)
+                .flat()
+                .filter(txi => txi!.fromAddress === from);
+            if(pendingTx && pendingTx.length)
+                return new Validation(false, `This wallet has a pending transaction`); 
+
+                const utxo = this.getUtxo(from);
+                for (let i = 0; i < transaction.txInputs.length; i++){
+                    const txi = transaction.txInputs[i];
+                    if (utxo.findIndex(txo => txo.tx === txi.previousTx && txo.amount >= txi.amount) === -1)
+                        return new Validation(false, `Invalid tx: the TXO is already spent or unexistent`);
+                }
+        }
+
+        const validation = transaction.isValid(this.getDifficulty(), this.getFeePerTx());
         if(!validation.success)
             return new Validation(false, "Invalid tx: "+ validation.message);
         
         if(this.blocks.some(b => b.transactions.some(tx => tx.hash === transaction.hash)))
             return new Validation(false, "Duplicated tx in blockchain.");
 
-        if(this.mempool.some(tx => tx.hash === transaction.hash))
-            return new Validation(false, "Duplicated tx in mempool.");
-
         this.mempool.push(transaction);
         return new Validation(true, transaction.hash);
     }
 
     addBlock(block: Block): Validation{
-        const lastBlock = this.getLastBlock();
-        const validation = block.isValid(lastBlock.hash, lastBlock.index, this.getDifficulty());
+        const nextBlock = this.getNextBlock();
+        if(!nextBlock)
+            return new Validation(false, `There is no next block info`);
+
+        const validation = block.isValid(nextBlock.previousHash, nextBlock.index - 1, nextBlock.difficulty, nextBlock.feePerTx);
         if(!validation.success) 
             return new Validation(false, `Invalid block ${validation.message}`);
         
@@ -100,7 +131,7 @@ export default class Blockchain {
         for(let i = this.blocks.length - 1; i > 0; i--){
             const currentBlock = this.blocks[i];
             const previousBlock = this.blocks[i-1];
-            const validation = currentBlock.isValid(previousBlock.hash, previousBlock.index, this.getDifficulty());
+            const validation = currentBlock.isValid(previousBlock.hash, previousBlock.index, this.getDifficulty(), this.getFeePerTx());
             if(!validation.success) 
                 return new Validation(false, `Invalid block #${currentBlock.index}: ${validation.message}`);
         }
@@ -129,5 +160,48 @@ export default class Blockchain {
             feePerTx,
             maxDifficulty
         } as BlockInfo;
+    }
+
+    getTxInputs(wallet: string): (TransactionInput | undefined)[] {
+        return this.blocks
+            .map(b => b.transactions)
+            .flat()
+            .filter(tx => tx.txInputs && tx.txInputs.length)
+            .map(tx => tx.txInputs)
+            .flat()
+            .filter(txi => txi!.fromAddress === wallet);
+    }
+
+    getTxOutputs(wallet: string): TransactionOutput[] {
+        return this.blocks
+            .map(b => b.transactions)
+            .flat()
+            .filter(tx => tx.txOutputs && tx.txOutputs.length)
+            .map(tx => tx.txOutputs)
+            .flat()
+            .filter(txo => txo!.toAddress === wallet);
+    }
+
+    getUtxo(wallet: string): TransactionOutput[]{
+        const txIns = this.getTxInputs(wallet);
+        const txOuts = this.getTxOutputs(wallet);
+
+        txIns.forEach(txi => {
+            const index = txOuts.findIndex(txo => txo.amount === txi!.amount);
+            txOuts.splice(index, 1);
+        })
+
+        return txOuts;
+    }
+
+    getBalance(wallet: string): number {
+        const utxo = this.getUtxo(wallet);
+        if(!utxo || !utxo.length) return 0;
+
+        return utxo.reduce((a, b) => a + b.amount, 0);
+    }
+
+    static getRewardAmount(difficulty: number) : number {
+        return (64 - difficulty) * 10;
     }
 }
