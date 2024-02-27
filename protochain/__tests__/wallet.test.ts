@@ -25,7 +25,6 @@ describe("Wallet tests", () => {
         const wallet = new Wallet(exampleWIF);
         expect(wallet.publicKey).toBeTruthy();
         expect(wallet.privateKey).toBeTruthy();
-
     })
 
 })
