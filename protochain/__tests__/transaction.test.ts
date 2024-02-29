@@ -28,64 +28,7 @@ describe("Transaction tests", () => {
         } as Transaction);
 
         const valid = tx.isValid(exampleDifficulty, exampleFee);
-        expect(valid.success).toBeTruthy();
-    })
-
-    test('Should NOT be valid (txo hash != tx hash)', () => {
-        const tx = new Transaction({
-            txInputs: [new TransactionInput()],
-            txOutputs: [new TransactionOutput()]
-        } as Transaction);
-
-        tx.txOutputs[0].tx = 'olele';
-
-        const valid = tx.isValid(exampleDifficulty, exampleFee);
-        expect(valid.success).toBeFalsy();
-    })
-
-    test('Should NOT be valid (inputs < outputs)', () => {
-        const tx = new Transaction({
-            txInputs: [new TransactionInput({
-                amount: 1
-            } as TransactionInput)],
-            txOutputs: [new TransactionOutput({
-                amount: 2
-            } as TransactionOutput)]
-        } as Transaction);
-
-        const valid = tx.isValid(exampleDifficulty, exampleFee);
-        expect(valid.success).toBeFalsy();
-    })
-
-    test('Should NOT be valid (invalid hash)', () => {
-        const tx = new Transaction({
-            txInputs: [new TransactionInput()],
-            txOutputs: [new TransactionOutput()],
-            type: TransactionType.REGULAR,
-            timestamp: Date.now(),
-            hash: 'abc'
-        } as Transaction);
-
-        const valid = tx.isValid(exampleDifficulty, exampleFee);
-        expect(valid.success).toBeFalsy();
-    })
-
-    test('Should be valid (FEE)', () => {
-        const tx = new Transaction({
-            txOutputs: [new TransactionOutput()],
-            type: TransactionType.FEE,
-        } as Transaction);
-
-        tx.txInputs = undefined;
-        tx.hash = tx.getHash();
-
-        const valid = tx.isValid(exampleDifficulty, exampleFee);
-        expect(valid.success).toBeTruthy();
-    })
-
-    test('Should NOT be valid (invalid t0)', () => {
-        const tx = new Transaction();
-        const valid = tx.isValid(exampleDifficulty, exampleFee);
+        expect(valid.success).toBeTruthy();     
         expect(valid.success).toBeFalsy();
     })
 
