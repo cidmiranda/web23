@@ -27,3 +27,5 @@ npm i dotenv
 npm i -D @nomiclabs/hardhat-etherscan 
 
 npx hardhat run scripts/deploy.ts --network sepolia
+
+npx hardhat run scripts/deploy.ts --network bsctest
