@@ -30,3 +30,6 @@ npx hardhat run scripts/deploy.ts --network sepolia
 
 npx hardhat run scripts/deploy.ts --network bsctest
 npx hardhat verify --network bsctest 0x88Dc1D79285d3b1612dF7a17c1f0DFe3b3f037D1
+
+
+npx hardhat verify --network sepolia 0x865B7F902B03B21B69d305FCC493E6Aa38Bf32a5
