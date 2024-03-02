@@ -2,12 +2,12 @@
 
 pragma solidity ^0.8.24;
 
-//Módulo 02 > Lição 03 > Tóps 08 e 09 - Contrato JoKenPo
-contract JoKenPo {
+import "./IJoKenPo.sol";
+import "./JKPLibrary.sol";
 
-    enum Options { NONE, ROCK, PAPER, SCISSORS }//0, 1, 2, 3
+contract JoKenPo is IJoKenPo {
 
-    Options private choice1 = Options.NONE;
+    JKPLibrary.Options private choice1 = JKPLibrary.Options.NONE;
     address private player1;
     string private result = "";
     uint256 private bid = 0.01 ether;
@@ -15,12 +15,7 @@ contract JoKenPo {
 
     address payable private immutable owner;
 
-    struct Player {
-        address wallet;
-        uint32 wins;
-    }
-
-    Player[] public players;
+    JKPLibrary.Player[] public players;
 
     constructor(){
         owner = payable(msg.sender);
@@ -39,13 +34,13 @@ contract JoKenPo {
     }
 
     function setBid(uint256 newBid) external{
-        require(msg.sender == owner, "You do not have permission");
+        require(tx.origin == owner, "You do not have permission");
         require(player1 == address(0), "You cannot change the bid with a game in progress");
         bid = newBid;
     }
 
     function setCommission(uint8 newCommission) external{
-        require(msg.sender == owner, "You do not have permission");
+        require(tx.origin == owner, "You do not have permission");
         require(player1 == address(0), "You cannot change the commission with a game in progress");
         commission = newCommission;
     }
@@ -57,7 +52,7 @@ contract JoKenPo {
                 return;
             }
         }
-        players.push(Player(winner, 1));
+        players.push(JKPLibrary.Player(winner, 1));
     }
 
     function finishGame(string memory newResult, address winner) private {
@@ -69,55 +64,55 @@ contract JoKenPo {
 
         result = newResult;
         player1 = address(0);
-        choice1 = Options.NONE;
+        choice1 = JKPLibrary.Options.NONE;
     }
 
-    function getBalance() public view returns (uint) {
-        require(owner == msg.sender, "You don't have this permisssion");
+    function getBalance() external view returns (uint256) {
+        require(owner == tx.origin, "You don't have this permisssion");
         return address(this).balance;
     }
 
-    function play(Options newChoice) external payable {
-        require(msg.sender != owner, "The owner cannot play");
-        require(newChoice != Options.NONE, "Invalid choice");
-        require(player1 != msg.sender, "Wait the another player");
+    function play(JKPLibrary.Options newChoice) external payable {
+        require(tx.origin != owner, "The owner cannot play");
+        require(newChoice != JKPLibrary.Options.NONE, "Invalid choice");
+        require(player1 != tx.origin, "Wait the another player");
         require(msg.value >= bid, "Invalid bid");
 
-        if(choice1 == Options.NONE){
-            player1 = msg.sender;
+        if(choice1 == JKPLibrary.Options.NONE){
+            player1 = tx.origin;
             choice1 = newChoice;
             result = "Player 1 choose his/her option. Waiting player 2";
         }
-        else if(choice1 == Options.ROCK && newChoice == Options.SCISSORS)
+        else if(choice1 == JKPLibrary.Options.ROCK && newChoice == JKPLibrary.Options.SCISSORS)
             finishGame("Rock breaks scissors. Player 1 won.", player1);
-        else if(choice1 == Options.PAPER && newChoice == Options.ROCK)
+        else if(choice1 == JKPLibrary.Options.PAPER && newChoice == JKPLibrary.Options.ROCK)
             finishGame("Paper wraps rock. Player 1 won.", player1);
-        else if(choice1 == Options.SCISSORS && newChoice == Options.PAPER)
+        else if(choice1 == JKPLibrary.Options.SCISSORS && newChoice == JKPLibrary.Options.PAPER)
             finishGame("Scissors cuts paper. Player 1 won.", player1);
-        else if(choice1 == Options.SCISSORS && newChoice == Options.ROCK)
-            finishGame("Rock breaks scissors. Player 2 won.", msg.sender);
-        else if(choice1 == Options.ROCK && newChoice == Options.PAPER)
-            finishGame("Paper wraps rock. Player 2 won.", msg.sender);
-        else if(choice1 == Options.PAPER && newChoice == Options.SCISSORS)
-            finishGame("Scissors cuts paper. Player 2 won.", msg.sender);
+        else if(choice1 == JKPLibrary.Options.SCISSORS && newChoice == JKPLibrary.Options.ROCK)
+            finishGame("Rock breaks scissors. Player 2 won.", tx.origin);
+        else if(choice1 == JKPLibrary.Options.ROCK && newChoice == JKPLibrary.Options.PAPER)
+            finishGame("Paper wraps rock. Player 2 won.", tx.origin);
+        else if(choice1 == JKPLibrary.Options.PAPER && newChoice == JKPLibrary.Options.SCISSORS)
+            finishGame("Scissors cuts paper. Player 2 won.", tx.origin);
         else{
             result = "Draw game. The prize was doubled.";
             player1 = address(0);
-            choice1 = Options.NONE;
+            choice1 = JKPLibrary.Options.NONE;
         }
     }
 
-    function getLeaderBoard() external view returns (Player[] memory) {
+    function getLeaderboard() external view returns (JKPLibrary.Player[] memory) {
         if(players.length < 2) return players;
 
-        Player[] memory arr = new Player[](players.length);
+        JKPLibrary.Player[] memory arr = new JKPLibrary.Player[](players.length);
         for(uint i = 0; i < players.length; i++)
             arr[i] = players[i];
 
         for(uint i = 0; i < arr.length - 1; i++){
             for(uint j = 0; j < arr.length; j++){
                 if(arr[i].wins < arr[j].wins){
-                    Player memory change = arr[i];
+                    JKPLibrary.Player memory change = arr[i];
                     arr[i] = arr[j];
                     arr[j] = change;
                 }

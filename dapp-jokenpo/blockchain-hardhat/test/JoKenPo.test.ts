@@ -26,7 +26,7 @@ describe("JoKenPo", function () {
     const player2Instance = joKenPo.connect(player2);
     await player2Instance.play(Options.ROCK, { value: DEFAULT_BID });
 
-    const leaderboard = await joKenPo.getLeaderBoard();
+    const leaderboard = await joKenPo.getLeaderboard();
 
     expect(leaderboard[0].wallet).to.equal(player1.address);
     expect(leaderboard[0].wins).to.equal(1);
