@@ -1,4 +1,4 @@
-import Web3 from "web3";
+import Web3, { Contract } from "web3";
 import { AbiItem } from "web3-utils";
 import ABI from './abi.json';
 import ReactDOMServer from 'react-dom/server';
@@ -10,7 +10,7 @@ function getWeb3() : Web3 {
     return new Web3(window.ethereum);
 }
 
-function getContract(web3?: Web3) /*: Contract*/ {
+function getContract(web3?: Web3) : Contract {
     if(!web3) web3 = getWeb3();
     return new web3.eth.Contract(ABI as AbiItem[], ADAPTER_ADDRESS, { from: localStorage.getItem("account") || undefined });
 }
@@ -35,10 +35,35 @@ export async function doLogin() : Promise<LoginResult> {
     
     localStorage.setItem("account", accounts[0]);
     localStorage.setItem("isAdmin", `${accounts[0].toLowerCase === ownerAddress}`);
+    //localStorage.setItem("isAdmin", `${accounts[0] === ownerAddress}`);
 
     return{
         account: accounts[0],
         isAdmin: accounts[0].toLowerCase === ownerAddress //gambi
     } as LoginResult;
 
+}
+
+export function doLogout(){
+    localStorage.removeItem("account");
+    localStorage.removeItem("isAdmin");
+}
+
+export type Dashboard = {
+    bid?: string;
+    commission?: number;
+    address?: string;
+}
+
+export async function getDashboard() : Promise<Dashboard> {
+    const contract = getContract();
+    const address = await contract.methods.getAddress().call();
+    //const saddress = ReactDOMServer.renderToString(await contract.methods.getImplementationAddress().call());
+    //const address = saddress.toString();
+    if(/^(0x0+)$/.test(address))
+        return { bid: Web3.utils.toWei("0.01", "ether"), commission: 10, address } as Dashboard;
+    const bid = await contract.methods.getBid().call();
+    const commission = await contract.methods.getCommission().call();
+    return { bid, commission, address } as Dashboard;
+    
 }
