@@ -13,6 +13,8 @@ function Admin() {
     }, [])
 
     console.log(dashboard?.bid);
+    console.log(dashboard?.commission);
+    console.log(dashboard?.address);
     function onInputChange(event: React.ChangeEvent<HTMLInputElement>){
         setDashboard(prevState => ({...prevState, [event.target.id]: event.target.value}));
     }
@@ -43,7 +45,7 @@ function Admin() {
                         <div className="col-sm-6">
                             <label htmlFor="bid" className="form-label">Bid (wei):</label>
                             <div className="input-group">
-                                <input type="string" className="form-control" id="bid" value={dashboard?.bid || ""} onChange={onInputChange} />
+                                <input type="number" className="form-control" id="bid" value={dashboard?.bid || "0"} onChange={onInputChange} />
                                 <span className="input-group-text bg-secondary">wei</span>
                                 <button type="button" className="btn btn-primary d-line-flex align-items-center" onClick={onChangeBidClick}>Change Bid</button>
                             </div>
@@ -51,7 +53,7 @@ function Admin() {
                         <div className="col-sm-6">
                             <label htmlFor="commission" className="form-label">Commission (%):</label>
                             <div className="input-group">
-                                <input type="number" className="form-control" id="commission" value={dashboard?.commission || ""} onChange={onInputChange} />
+                                <input type="number" className="form-control" id="commission" value={dashboard?.commission || "0"} onChange={onInputChange} />
                                 <span className="input-group-text bg-secondary">%</span>
                                 <button type="button" className="btn btn-primary d-line-flex align-items-center" onClick={onChangeCommissionClick}>Change Commision</button>
                             </div>
